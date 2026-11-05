@@ -169,7 +169,7 @@ function Write-ToolkitFooter {
         $CustomControls
     }
     else {
-        " [Up/Down] Navigate   [Enter] Select   [1-8] Hotkey   [Esc/0] Back   [Q] Exit"
+        " [Up/Down] Navigate   [Enter] Select   [1-9] Hotkey   [Esc/0] Back   [Q] Exit"
     }
 
     $formattedControls = Format-Colored -Text $controls -Color "SecondaryText" -UseTrueColor $UseTrueColor

@@ -128,6 +128,42 @@ foreach ($pattern in $prohibitedStrings) {
 }
 
 Write-Host ""
+
+# Phase 5: Activation Management & Licensing Diagnostics Tests
+Write-Host "Phase 5: Testing Activation Management Modules..." -ForegroundColor Yellow
+
+. (Join-Path -Path $srcDir -ChildPath "core/Permissions.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/OfficeInformation/OfficeDiscovery.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Network/ConnectivityCheck.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/WindowsActivation.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/OfficeActivation.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/KmsManagement.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/ActivationDiagnostics.ps1")
+
+$winLic = Get-WindowsDigitalLicenseStatus
+Assert-Test -Name "WindowsActivation: Digital license status object returned" -Condition ($null -ne $winLic -and -not [string]::IsNullOrEmpty($winLic.ProductName))
+Assert-Test -Name "WindowsActivation: Channel detected" -Condition (-not [string]::IsNullOrEmpty($winLic.Channel))
+
+$offDiag = Get-OfficeActivationDiagnostics
+Assert-Test -Name "OfficeActivation: Diagnostic audit object returned" -Condition ($null -ne $offDiag)
+Assert-Test -Name "OfficeActivation: Ohook check returns boolean" -Condition ($offDiag.OhookDetected -is [bool])
+
+$kmsDiag = Get-KmsConfigurationReport
+Assert-Test -Name "KmsManagement: KMS configuration report returned" -Condition ($null -ne $kmsDiag -and -not [string]::IsNullOrEmpty($kmsDiag.ClientMachineId))
+Assert-Test -Name "KmsManagement: Detects unauthorized emulator host (kms8.msguides.com)" -Condition (Test-UnauthorizedKmsHost -HostName "kms8.msguides.com")
+Assert-Test -Name "KmsManagement: Detects loopback emulator (127.0.0.2)" -Condition (Test-UnauthorizedKmsHost -HostName "127.0.0.2")
+Assert-Test -Name "KmsManagement: Allows legitimate enterprise KMS host (kms.corp.contoso.com)" -Condition (-not (Test-UnauthorizedKmsHost -HostName "kms.corp.contoso.com"))
+
+$sppDiag = Get-ActivationDiagnosticsReport
+Assert-Test -Name "ActivationDiagnostics: SPP service telemetry returned" -Condition ($null -ne $sppDiag -and -not [string]::IsNullOrEmpty($sppDiag.SlsVersion))
+
+$errResolved = Resolve-ActivationErrorCode -ErrorCode "0xC004F074"
+Assert-Test -Name "ActivationDiagnostics: Resolves 0xC004F074 (SL_E_CHPA_NO_KMS_AVAILABLE)" -Condition ($errResolved.Symbolic -eq "SL_E_CHPA_NO_KMS_AVAILABLE")
+
+$adminCheck = Test-ToolkitAdmin
+Assert-Test -Name "Permissions: Admin privilege check returns boolean" -Condition ($adminCheck -is [bool])
+
+Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "TEST SUMMARY: $passedTests / $totalTests Passed ($failedTests Failed)" -ForegroundColor $(if ($failedTests -eq 0) { "Green" } else { "Red" })
 Write-Host "============================================================" -ForegroundColor Cyan

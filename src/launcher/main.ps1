@@ -75,6 +75,10 @@ $srcDir = Join-Path -Path $launcherDir -ChildPath ".."
 . (Join-Path -Path $srcDir -ChildPath "modules/Maintenance/LicensingServiceRepair.ps1")
 . (Join-Path -Path $srcDir -ChildPath "modules/WindowsManagement/EditionInspector.ps1")
 . (Join-Path -Path $srcDir -ChildPath "modules/Network/ConnectivityCheck.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/WindowsActivation.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/OfficeActivation.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/KmsManagement.ps1")
+. (Join-Path -Path $srcDir -ChildPath "modules/Activation/ActivationDiagnostics.ps1")
 
 # Initialize Runtime State
 $config = Get-ToolkitConfiguration
@@ -135,6 +139,14 @@ $menuItems = @(
         "System & Licensing Inspection",
         "",
         { Show-OfficeInformationScreen -UseTrueColor $useTrueColor }
+    ),
+    [MenuItem]::new(
+        "9",
+        "Activation Management Hub",
+        "Digital License, Office, KMS, Diagnostics & Troubleshooter",
+        "System & Licensing Inspection",
+        "",
+        { Show-ActivationHubScreen -Environment $envInfo -OfficeStatus $officeTag -IsAdmin $isAdmin -Width $config.StandardWidth -UseTrueColor $useTrueColor -ForceAscii $config.ForceAsciiBorders }
     ),
     [MenuItem]::new(
         "4",
