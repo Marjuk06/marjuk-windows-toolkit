@@ -14,8 +14,14 @@ param()
 
 $ErrorActionPreference = "Stop"
 
-# Set TLS 1.2 / TLS 1.3
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls13
+# Ensure TLS 1.2 is enabled for Windows PowerShell 5.1
+try {
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+}
+catch {
+    # Fallback integer code for TLS 1.2
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+}
 
 $appName = "MARJUK AMIN WINDOWS TOOLKIT"
 $tagline = "A better way to manage Windows."
@@ -31,7 +37,8 @@ Write-Host "  ╰─────────────────────
 Write-Host ""
 Write-Host "  [INFO] Initializing official toolkit bootstrap..." -ForegroundColor Gray
 
-$tempDir = Join-Path -Path [System.IO.Path]::GetTempPath() -ChildPath "MarjukToolkit"
+$tempRoot = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
+$tempDir = Join-Path -Path $tempRoot -ChildPath "MarjukToolkit"
 $appDir = Join-Path -Path $tempDir -ChildPath "App"
 $zipFile = Join-Path -Path $tempDir -ChildPath "toolkit.zip"
 
