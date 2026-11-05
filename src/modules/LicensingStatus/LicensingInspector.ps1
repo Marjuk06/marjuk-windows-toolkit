@@ -119,8 +119,65 @@ function Show-WindowsLicensingScreen {
     }
 
     [System.Console]::WriteLine()
-    [System.Console]::WriteLine("  " + (Format-Colored -Text "Note: This diagnostic view is completely read-only and queries Windows Software Protection Platform APIs." -Color "SecondaryText" -UseTrueColor $UseTrueColor))
+    [System.Console]::WriteLine("  " + (Format-Colored -Text "Note: This diagnostic view queries Windows Software Protection Platform APIs." -Color "SecondaryText" -UseTrueColor $UseTrueColor))
+    [System.Console]::WriteLine()
+    [System.Console]::WriteLine("  " + (Format-Colored -Text "GENUINE ACTIVATION & MANAGEMENT OPTIONS" -Color "PrimaryText" -Bold $true -UseTrueColor $UseTrueColor))
+    [System.Console]::WriteLine("  [S] Open Windows Activation Settings (ms-settings:activation)")
+    [System.Console]::WriteLine("  [K] Install Genuine 25-character Product Key (slmgr.vbs /ipk)")
+    [System.Console]::WriteLine("  [A] Trigger Official Online Activation (slmgr.vbs /ato)")
+    [System.Console]::WriteLine("  [Enter] Return to main menu")
+    [System.Console]::WriteLine()
+    [System.Console]::Write("  Select an action or press Enter: ")
 
-    Show-ToolkitPause -UseTrueColor $UseTrueColor
+    $choice = [System.Console]::ReadLine()
+    if ($choice) {
+        $cleanChoice = $choice.Trim().ToUpper()
+        switch ($cleanChoice) {
+            "S" {
+                if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+                    Start-Process "ms-settings:activation"
+                    [System.Console]::WriteLine("  Launched Windows Activation Settings.")
+                }
+                else {
+                    [System.Console]::WriteLine("  [Test Mock] Launched ms-settings:activation.")
+                }
+                Show-ToolkitPause -UseTrueColor $UseTrueColor
+            }
+            "K" {
+                if (-not (Test-ToolkitAdmin)) {
+                    [System.Console]::WriteLine("  " + (Format-Colored -Text "Administrator rights required to install a system product key." -Color "CrimsonAccent" -Bold $true -UseTrueColor $UseTrueColor))
+                    Show-ToolkitPause -UseTrueColor $UseTrueColor
+                    return
+                }
+                [System.Console]::Write("  Enter your 25-character Product Key (XXXXX-XXXXX-XXXXX-XXXXX-XXXXX): ")
+                $keyInput = [System.Console]::ReadLine().Trim().ToUpper()
+                if ($keyInput -match "^[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}-[A-Z0-9]{5}$") {
+                    [System.Console]::WriteLine("  Installing product key via slmgr.vbs /ipk...")
+                    if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+                        $slmgrOutput = & cscript.exe //nologo "$env:SystemRoot\System32\slmgr.vbs" /ipk $keyInput
+                        [System.Console]::WriteLine("  $slmgrOutput")
+                    }
+                    else {
+                        [System.Console]::WriteLine("  [Test Mock] Key $keyInput accepted.")
+                    }
+                }
+                else {
+                    [System.Console]::WriteLine("  " + (Format-Colored -Text "Invalid product key format. Key was not applied." -Color "Error" -Bold $true -UseTrueColor $UseTrueColor))
+                }
+                Show-ToolkitPause -UseTrueColor $UseTrueColor
+            }
+            "A" {
+                [System.Console]::WriteLine("  Attempting activation via slmgr.vbs /ato...")
+                if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+                    $slmgrOutput = & cscript.exe //nologo "$env:SystemRoot\System32\slmgr.vbs" /ato
+                    [System.Console]::WriteLine("  $slmgrOutput")
+                }
+                else {
+                    [System.Console]::WriteLine("  [Test Mock] Official online activation query triggered.")
+                }
+                Show-ToolkitPause -UseTrueColor $UseTrueColor
+            }
+        }
+    }
 }
 

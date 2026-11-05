@@ -63,12 +63,14 @@ function Test-EndpointReachability {
         }
         else {
             $result.Reachable = $false
-            $result.Details = "Unreachable ($($_.Message))"
+            $errDetail = if ($_.Exception.Message) { $_.Exception.Message } else { "Connection timeout" }
+            $result.Details = "Unreachable ($errDetail)"
         }
     }
     catch {
         $result.Reachable = $false
-        $result.Details = "Failed ($($_.Message))"
+        $errDetail = if ($_.Exception.Message) { $_.Exception.Message } else { "Connection failed" }
+        $result.Details = "Failed ($errDetail)"
     }
 
     return $result
@@ -115,9 +117,9 @@ function Show-NetworkDiagnosticsScreen {
 
     $endpoints = @(
         @{ Name = "Toolkit Portal"; Url = "https://wintoolkit.marjukamin.com" },
-        @{ Name = "Windows Licensing"; Url = "https://licensing.mp.microsoft.com" },
-        @{ Name = "Software Protection"; Url = "https://sls.microsoft.com" },
-        @{ Name = "Office Click-to-Run CDN"; Url = "https://officecdn.microsoft.com" },
+        @{ Name = "Microsoft Licensing SLS"; Url = "https://activation-v2.sls.microsoft.com" },
+        @{ Name = "Microsoft Account Auth"; Url = "https://login.live.com" },
+        @{ Name = "Office Config Service"; Url = "https://config.office.com" },
         @{ Name = "Windows Update CDN"; Url = "http://download.windowsupdate.com" }
     )
 
