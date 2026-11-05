@@ -9,6 +9,18 @@
     Copyright (c) 2026 Marjuk Amin.
 #>
 
+function Get-ToolkitOptimalWidth {
+    try {
+        $w = [Console]::WindowWidth
+        if ($w -ge 84) { return 78 }
+        if ($w -ge 70) { return ($w - 2) }
+        return 76
+    }
+    catch {
+        return 76
+    }
+}
+
 function Write-ToolkitHeader {
     [CmdletBinding()]
     param(
@@ -22,7 +34,7 @@ function Write-ToolkitHeader {
         [bool]$IsAdmin = $false,
 
         [Parameter(Mandatory = $false)]
-        [int]$Width = 92,
+        [int]$Width = 76,
 
         [Parameter(Mandatory = $false)]
         [bool]$UseTrueColor = $true,
@@ -32,50 +44,62 @@ function Write-ToolkitHeader {
     )
 
     $glyphs = Get-ToolkitBorderGlyphs -ForceAscii $ForceAscii
+    $innerWidth = [Math]::Max(40, $Width - 2)
 
-    # Line 1: Top Border with Product Brand and Domain Link
-    $leftTag = " MARJUK AMIN // WINDOWS TOOLKIT v1.0.0 "
-    $rightTag = " https://wintoolkit.marjukamin.com "
+    # Line 1: Top Border with Product Brand
+    $titleTag = " MARJUK AMIN // WINDOWS TOOLKIT "
+    $prefix = "$($glyphs.TopLeft)$($glyphs.Horizontal) "
+    $prefixRaw = 3 # 1 glyph + 1 glyph + 1 space
 
-    $spaceAvailable = $Width - ($leftTag.Length + $rightTag.Length + 4)
-    if ($spaceAvailable -lt 4) {
-        $rightTag = ""
-        $spaceAvailable = $Width - ($leftTag.Length + 4)
-    }
+    $fillLength = [Math]::Max(2, $innerWidth - ($prefixRaw + $titleTag.Length + 1))
+    $topFill = [string]::new($glyphs.Horizontal, $fillLength)
 
-    $topBorderFill = [string]::new($glyphs.Horizontal, [Math]::Max(2, $spaceAvailable))
     $topLine = "$($glyphs.TopLeft)$($glyphs.Horizontal) " +
-               (Format-Colored -Text $leftTag -Color "PrimaryText" -Bold $true -UseTrueColor $UseTrueColor) +
-               (Format-Colored -Text $topBorderFill -Color "Burgundy" -UseTrueColor $UseTrueColor) +
-               (Format-Colored -Text $rightTag -Color "SecondaryText" -UseTrueColor $UseTrueColor) +
+               (Format-Colored -Text $titleTag -Color "PrimaryText" -Bold $true -UseTrueColor $UseTrueColor) +
+               (Format-Colored -Text $topFill -Color "Burgundy" -UseTrueColor $UseTrueColor) +
                "$($glyphs.Horizontal)$($glyphs.TopRight)"
 
-    # Line 2: Telemetry Information Row
-    $osTag = "OS: $($Environment.OsName) ($($Environment.BuildNumber)) [$($Environment.Architecture)]"
-    $offTag = "OFFICE: $OfficeStatus"
-    $adminBadge = if ($IsAdmin) {
-        Get-StatusBadge -Status "ADMIN" -UseTrueColor $UseTrueColor
+    # Line 2: Telemetry Information Row (Mathematically fitted to $innerWidth)
+    $shortOs = if ($Environment.OsName.Length -gt 24) {
+        $Environment.OsName.Substring(0, 21) + "..."
+    } else {
+        $Environment.OsName
     }
-    else {
+    $osPart = "OS: $shortOs [$($Environment.Architecture)]"
+    
+    $shortOff = if ($OfficeStatus.Length -gt 16) {
+        $OfficeStatus.Substring(0, 13) + "..."
+    } else {
+        $OfficeStatus
+    }
+    $offPart = "OFFICE: $shortOff"
+    
+    $adminTag = if ($IsAdmin) { "[ADMIN]" } else { "[USER]" }
+    $adminBadgeColored = if ($IsAdmin) {
+        Get-StatusBadge -Status "ADMIN" -UseTrueColor $UseTrueColor
+    } else {
         Format-Colored -Text "[USER]" -Color "SecondaryText" -UseTrueColor $UseTrueColor
     }
 
-    $telemetryContent = "  $osTag    $offTag    STATUS: $adminBadge"
-    # Pad content inside the border
-    $rawContentLength = 2 + $osTag.Length + 4 + $offTag.Length + 12 + 8 # Approximate stripped length
-    $middleFillLength = [Math]::Max(2, $Width - 62)
-    $middleFill = "".PadRight($middleFillLength)
+    $leftRaw = "  $osPart   $offPart"
+    $rightRaw = "STATUS: $adminTag  "
+    
+    # Calculate exact middle space fill
+    $totalRawContent = $leftRaw.Length + $rightRaw.Length
+    $middleSpacesCount = [Math]::Max(1, $innerWidth - $totalRawContent)
+    $middleFill = " " * $middleSpacesCount
 
-    $middleLine = "$($glyphs.Vertical)  " +
-                  (Format-Colored -Text $osTag -Color "PrimaryText" -UseTrueColor $UseTrueColor) +
-                  "    " +
-                  (Format-Colored -Text $offTag -Color "SecondaryText" -UseTrueColor $UseTrueColor) +
-                  $middleFill +
-                  "STATUS: $adminBadge  $($glyphs.Vertical)"
+    $leftColored = "  " + (Format-Colored -Text $osPart -Color "PrimaryText" -UseTrueColor $UseTrueColor) +
+                   "   " + (Format-Colored -Text $offPart -Color "SecondaryText" -UseTrueColor $UseTrueColor)
+    $rightColored = (Format-Colored -Text "STATUS: " -Color "SecondaryText" -UseTrueColor $UseTrueColor) +
+                    $adminBadgeColored + "  "
+
+    $middleLine = "$($glyphs.Vertical)$leftColored$middleFill$rightColored$($glyphs.Vertical)"
 
     # Line 3: Bottom Border
+    $bottomFill = [string]::new($glyphs.Horizontal, $innerWidth)
     $bottomLine = "$($glyphs.BottomLeft)" +
-                  (Format-Colored -Text ([string]::new($glyphs.Horizontal, $Width - 2)) -Color "Burgundy" -UseTrueColor $UseTrueColor) +
+                  (Format-Colored -Text $bottomFill -Color "Burgundy" -UseTrueColor $UseTrueColor) +
                   "$($glyphs.BottomRight)"
 
     [System.Console]::WriteLine($topLine)
@@ -94,11 +118,16 @@ function Write-ToolkitScreenTitle {
         [string]$Subtitle = "",
 
         [Parameter(Mandatory = $false)]
-        [int]$Width = 92,
+        [int]$Width = 76,
 
         [Parameter(Mandatory = $false)]
-        [bool]$UseTrueColor = $true
+        [bool]$UseTrueColor = $true,
+
+        [Parameter(Mandatory = $false)]
+        [bool]$ForceAscii = $false
     )
+
+    $glyphs = Get-ToolkitBorderGlyphs -ForceAscii $ForceAscii
 
     $titleLine = "  " + (Format-Colored -Text $Title.ToUpper() -Color "PrimaryText" -Bold $true -UseTrueColor $UseTrueColor)
     [System.Console]::WriteLine($titleLine)
@@ -108,7 +137,8 @@ function Write-ToolkitScreenTitle {
         [System.Console]::WriteLine($subLine)
     }
 
-    $divider = "  " + (Format-Colored -Text ([string]::new([char]0x2500, $Width - 4)) -Color "Burgundy" -UseTrueColor $UseTrueColor)
+    $dividerLen = [Math]::Max(10, $Width - 4)
+    $divider = "  " + (Format-Colored -Text ([string]::new($glyphs.Horizontal, $dividerLen)) -Color "Burgundy" -UseTrueColor $UseTrueColor)
     [System.Console]::WriteLine($divider)
     [System.Console]::WriteLine()
 }
@@ -120,7 +150,7 @@ function Write-ToolkitFooter {
         [string]$CustomControls = "",
 
         [Parameter(Mandatory = $false)]
-        [int]$Width = 92,
+        [int]$Width = 76,
 
         [Parameter(Mandatory = $false)]
         [bool]$UseTrueColor = $true,
@@ -139,10 +169,9 @@ function Write-ToolkitFooter {
         $CustomControls
     }
     else {
-        " [Up/Down] Navigate   [Enter] Select   [1-8, A, S] Hotkey   [Esc/0] Back   [Q] Exit"
+        " [Up/Down] Navigate   [Enter] Select   [1-8] Hotkey   [Esc/0] Back   [Q] Exit"
     }
 
     $formattedControls = Format-Colored -Text $controls -Color "SecondaryText" -UseTrueColor $UseTrueColor
     [System.Console]::WriteLine($formattedControls)
 }
-

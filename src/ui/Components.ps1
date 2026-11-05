@@ -83,7 +83,7 @@ function Write-ToolkitCategory {
         [string]$Title,
 
         [Parameter(Mandatory = $false)]
-        [int]$Width = 92,
+        [int]$Width = 76,
 
         [Parameter(Mandatory = $false)]
         [bool]$UseTrueColor = $true,
@@ -123,7 +123,7 @@ function Write-ToolkitMenuRow {
         [bool]$IsSelected = $false,
 
         [Parameter(Mandatory = $false)]
-        [int]$Width = 92,
+        [int]$Width = 76,
 
         [Parameter(Mandatory = $false)]
         [bool]$UseTrueColor = $true,

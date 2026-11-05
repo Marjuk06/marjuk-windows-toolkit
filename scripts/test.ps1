@@ -71,7 +71,7 @@ Write-Host "Phase 2: Testing Core Infrastructure..." -ForegroundColor Yellow
 $config = Get-ToolkitConfiguration -ConfigPath (Join-Path -Path $toolkitRoot -ChildPath "config/settings.json")
 Assert-Test -Name "Config: AppName is correct" -Condition ($config.AppName -eq "MARJUK AMIN WINDOWS TOOLKIT")
 Assert-Test -Name "Config: PrimaryDomain is wintoolkit.marjukamin.com" -Condition ($config.PrimaryDomain -eq "https://wintoolkit.marjukamin.com")
-Assert-Test -Name "Config: StandardWidth is positive" -Condition ($config.StandardWidth -ge 80)
+Assert-Test -Name "Config: StandardWidth is positive" -Condition ($config.StandardWidth -ge 70)
 
 # Test Environment
 . (Join-Path -Path $srcDir -ChildPath "core/Environment.ps1")

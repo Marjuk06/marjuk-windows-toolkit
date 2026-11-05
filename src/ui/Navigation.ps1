@@ -37,7 +37,7 @@ function Invoke-ToolkitMenuLoop {
         [scriptblock]$RenderHeader,
 
         [Parameter(Mandatory = $false)]
-        [int]$Width = 92,
+        [int]$Width = 76,
 
         [Parameter(Mandatory = $false)]
         [bool]$UseTrueColor = $true,

@@ -23,9 +23,20 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Set Process ExecutionPolicy to Bypass on Windows
+if ($env:OS -eq "Windows_NT" -or (Get-Variable -Name IsWindows -ValueOnly -ErrorAction SilentlyContinue)) {
+    try {
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force -ErrorAction SilentlyContinue
+    }
+    catch {}
+}
+$ProgressPreference = "SilentlyContinue"
+
 # Set UTF-8 encoding for clean Unicode border rendering
 try {
-    [System.Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
 }
 catch {
     # Ignore if redirected

@@ -26,6 +26,8 @@ THEME = {
     "Reset": f"{ESC}[0m"
 }
 
+WIDTH = 76
+
 def color(text, color_name="PrimaryText", bold=False):
     c = THEME.get(color_name, THEME["PrimaryText"])
     b = THEME["Bold"] if bold else ""
@@ -35,20 +37,26 @@ def clear():
     sys.stdout.write(f"{ESC}[2J{ESC}[H")
     sys.stdout.flush()
 
-def header(width=92):
-    t_left = " MARJUK AMIN // WINDOWS TOOLKIT v1.0.0 "
-    t_right = " https://wintoolkit.marjukamin.com "
-    fill_len = max(2, width - (len(t_left) + len(t_right) + 4))
+def header():
+    inner_w = WIDTH - 2
+    t_tag = " MARJUK AMIN // WINDOWS TOOLKIT "
+    prefix = "╭─ "
+    top_fill = "─" * max(2, inner_w - (len(prefix) + len(t_tag) + 1))
+    top = f"╭─ {color(t_tag, 'PrimaryText', True)}{color(top_fill, 'Burgundy')}─╮"
     
-    top = f"╭─ {color(t_left, 'PrimaryText', True)}{color('─'*fill_len, 'Burgundy')}{color(t_right, 'SecondaryText')}─╮"
+    os_part = "OS: Win 11 Pro [x64]"
+    off_part = "OFFICE: M365 Apps"
+    admin_tag = "[PREVIEW]"
+    admin_badge = f"{THEME['Bold']}{THEME['CrimsonAccent']}{admin_tag}{THEME['Reset']}"
     
-    os_tag = "OS: Linux Zorin OS 18.1 (Mock: Win 11 26100) [x64]"
-    off_tag = "OFFICE: Microsoft 365 C2R"
-    admin_badge = f"{THEME['Bold']}{THEME['CrimsonAccent']}[LINUX PREVIEW]{THEME['Reset']}"
+    left_raw = f"  {os_part}   {off_part}"
+    right_raw = f"STATUS: {admin_tag}  "
+    mid_fill = " " * max(1, inner_w - (len(left_raw) + len(right_raw)))
     
-    mid_fill = " " * max(2, width - (len(os_tag) + len(off_tag) + 36))
-    mid = f"│  {color(os_tag, 'PrimaryText')}    {color(off_tag, 'SecondaryText')}{mid_fill}STATUS: {admin_badge}  │"
-    bot = f"╰{color('─'*(width-2), 'Burgundy')}╯\n"
+    left_colored = f"  {color(os_part, 'PrimaryText')}   {color(off_part, 'SecondaryText')}"
+    right_colored = f"{color('STATUS: ', 'SecondaryText')}{admin_badge}  "
+    mid = f"│{left_colored}{mid_fill}{right_colored}│"
+    bot = f"╰{color('─'*inner_w, 'Burgundy')}╯\n"
     
     print(top)
     print(mid)
@@ -58,7 +66,7 @@ def screen_title(title, sub=""):
     print(f"  {color(title.upper(), 'PrimaryText', True)}")
     if sub:
         print(f"  {color(sub, 'SecondaryText')}")
-    print(f"  {color('─'*88, 'Burgundy')}\n")
+    print(f"  {color('─'*(WIDTH-4), 'Burgundy')}\n")
 
 def pause():
     print(f"\n  {color('Press Enter to return to main dashboard...', 'SecondaryText')}")
@@ -67,123 +75,107 @@ def pause():
     except:
         pass
 
+def category(title):
+    formatted = f" {title.upper()} "
+    fill = "─" * max(2, WIDTH - len(formatted))
+    print(f"{color(formatted, 'PrimaryText', True)}{color(fill, 'Burgundy')}")
+
+def menu_row(key, title, desc):
+    key_part = f"  {color(f'[{key}]', 'CrimsonAccent')} {color(title.ljust(24), 'PrimaryText')}"
+    desc_part = color(desc[:WIDTH - 36], 'SecondaryText')
+    print(f"{key_part} {desc_part}")
+
 def show_system_overview():
     clear()
     screen_title("System & Hardware Overview", "Environmental and Platform Telemetry")
     print(f"  {color('HARDWARE & FIRMWARE SUMMARY', 'PrimaryText', True)}\n")
-    print(f"  {'Computer Name'.ljust(26)}: {color('localhost', 'PrimaryText', True)}")
-    print(f"  {'Platform / Kernel'.ljust(26)}: {color('Linux 7.0.0-42-generic (x86_64)', 'PrimaryText', True)}")
-    print(f"  {'Processor'.ljust(26)}: {color('x86_64 Host Processor (Multi-Core)', 'PrimaryText', True)}")
-    print(f"  {'Installed Memory'.ljust(26)}: {color('16.0 GB RAM (Available)', 'PrimaryText', True)}")
-    print(f"  {'Secure Boot State'.ljust(26)}: {color('Enabled (Mock Validated)', 'Success', True)}")
-    print(f"  {'TPM Readiness'.ljust(26)}: {color('TPM 2.0 Ready (Mock)', 'Success', True)}\n")
+    print(f"  {'Computer Name'.ljust(24)}: {color('localhost', 'PrimaryText', True)}")
+    print(f"  {'Platform / Kernel'.ljust(24)}: {color('Linux (Mock: Windows 11)', 'PrimaryText', True)}")
+    print(f"  {'Processor'.ljust(24)}: {color('x86_64 Host Processor', 'PrimaryText', True)}")
+    print(f"  {'Installed Memory'.ljust(24)}: {color('16.0 GB RAM (Available)', 'PrimaryText', True)}")
+    print(f"  {'Secure Boot State'.ljust(24)}: {color('Enabled', 'Success', True)}")
+    print(f"  {'TPM Readiness'.ljust(24)}: {color('TPM 2.0 Ready', 'Success', True)}\n")
     print(f"  {color('TERMINAL ENGINE TEST', 'PrimaryText', True)}\n")
-    print(f"  {'Color Engine'.ljust(26)}: {color('24-bit TrueColor ANSI (#800020 Burgundy)', 'CrimsonAccent', True)}")
-    print(f"  {'Status Tags'.ljust(26)}: {color('[OK]', 'Success', True)}  {color('[WARN]', 'Warning', True)}  {color('[ADMIN]', 'CrimsonAccent', True)}  {color('[INFO]', 'SecondaryText')}")
+    print(f"  {'Color Engine'.ljust(24)}: {color('24-bit TrueColor ANSI (#800020 Burgundy)', 'CrimsonAccent', True)}")
+    print(f"  {'Status Tags'.ljust(24)}: {color('[OK]', 'Success', True)}  {color('[WARN]', 'Warning', True)}  {color('[ADMIN]', 'CrimsonAccent', True)}  {color('[INFO]', 'SecondaryText')}")
     pause()
 
 def show_licensing():
     clear()
-    screen_title("Windows Licensing Inspector", "Official WMI and CIM Licensing Verification (Read-Only)")
+    screen_title("Windows Licensing Inspector", "WMI/CIM Licensing Verification (Read-Only)")
     print(f"  {color('OPERATING SYSTEM LICENSE REPORT', 'PrimaryText', True)}\n")
-    print(f"  {'Product Name'.ljust(26)}: {color('Windows 11 Professional', 'PrimaryText', True)}")
-    print(f"  {'License Description'.ljust(26)}: {color('Windows(R) Operating System, RETAIL channel', 'PrimaryText', True)}")
-    print(f"  {'Channel'.ljust(26)}: {color('Retail', 'PrimaryText', True)}")
-    print(f"  {'Partial Product Key'.ljust(26)}: {color('3V66T', 'PrimaryText', True)}")
-    print(f"  {'Activation State'.ljust(26)}: {color('Licensed', 'Success', True)}\n")
-    print(f"  {color('Note: In Windows, this executes real-time queries against SoftwareLicensingProduct CIM.', 'SecondaryText')}")
+    print(f"  {'Product Name'.ljust(24)}: {color('Windows 11 Professional', 'PrimaryText', True)}")
+    print(f"  {'License Description'.ljust(24)}: {color('RETAIL channel license', 'PrimaryText', True)}")
+    print(f"  {'Channel'.ljust(24)}: {color('Retail', 'PrimaryText', True)}")
+    print(f"  {'Partial Product Key'.ljust(24)}: {color('3V66T', 'PrimaryText', True)}")
+    print(f"  {'Activation State'.ljust(24)}: {color('Licensed', 'Success', True)}\n")
     pause()
 
 def show_office():
     clear()
-    screen_title("Microsoft Office Discovery", "Click-to-Run Suite & Servicing Channel Verification")
+    screen_title("Microsoft Office Discovery", "Click-to-Run Suite & Channel Verification")
     print(f"  {color('OFFICE INSTALLATION DETAILS', 'PrimaryText', True)}\n")
-    print(f"  {'Installed Status'.ljust(26)}: {color('Installed', 'Success', True)}")
-    print(f"  {'Version / Build'.ljust(26)}: {color('16.0.17830.20166', 'PrimaryText', True)}")
-    print(f"  {'Architecture'.ljust(26)}: {color('x64', 'PrimaryText', True)}")
-    print(f"  {'Update Channel'.ljust(26)}: {color('Current Channel', 'PrimaryText', True)}")
-    print(f"  {'Product Release ID'.ljust(26)}: {color('Microsoft 365 Apps for enterprise', 'PrimaryText', True)}")
+    print(f"  {'Installed Status'.ljust(24)}: {color('Installed', 'Success', True)}")
+    print(f"  {'Version / Build'.ljust(24)}: {color('16.0.17830.20166', 'PrimaryText', True)}")
+    print(f"  {'Architecture'.ljust(24)}: {color('x64', 'PrimaryText', True)}")
+    print(f"  {'Update Channel'.ljust(24)}: {color('Current Channel', 'PrimaryText', True)}")
+    print(f"  {'Product Release ID'.ljust(24)}: {color('Microsoft 365 Enterprise', 'PrimaryText', True)}")
     pause()
 
 def show_sfc():
     clear()
     screen_title("System File Integrity (SFC)", "Protected Windows System File Scanner")
-    print(f"  {color('CONFIRMATION REQUIRED:', 'PrimaryText', True)} {color('[MEDIUM RISK - SYSTEM SERVICING]', 'Warning', True)}")
+    print(f"  {color('CONFIRMATION REQUIRED:', 'PrimaryText', True)} {color('[SERVICING]', 'Warning', True)}")
     print(f"  Operation  : {color('Run System File Checker (sfc /scannow)', 'PrimaryText', True)}")
-    print(f"  Description: {color('Scans integrity of all protected system files and replaces corrupted files.', 'SecondaryText')}\n")
-    print(f"  {color('[Linux Preview Note] On Windows, this launches sfc.exe with real-time log parsing.', 'SecondaryText')}")
+    print(f"  Description: {color('Scans protected system files and replaces corrupted files.', 'SecondaryText')}\n")
     pause()
 
 def show_dism():
     clear()
-    screen_title("Component Servicing (DISM)", "Windows Component Store Integrity and Image Repair")
+    screen_title("Component Servicing (DISM)", "Windows Image Repair & Health Checks")
     print("  Choose a DISM servicing operation:\n")
-    print("  [1] CheckHealth   Quickly inspects whether component store corruption has been flagged.")
-    print("  [2] ScanHealth    Scans component store for corruptions (Takes 5-10 minutes).")
-    print("  [3] RestoreHealth Scans and automatically repairs component store via Windows Update.")
+    print("  [1] CheckHealth   Quickly inspects corruption flags.")
+    print("  [2] ScanHealth    Scans component store for corruptions.")
+    print("  [3] RestoreHealth Automatically repairs via Windows Update.")
     print("  [0] Return        Go back to main menu.\n")
-    print(f"  {color('[Linux Preview Note] DISM is supported natively on Windows host.', 'SecondaryText')}")
     pause()
 
 def show_service_repair():
     clear()
-    screen_title("Licensing Service & Store Repair", "Repair Corrupted sppsvc, ClipSVC, and Refresh Official Licenses")
+    screen_title("Licensing Service & Store Repair", "Repair Corrupted sppsvc & Refresh Official Licenses")
     print("  This maintenance routine will perform the following actions:")
-    print("  1. Verify the operational state of sppsvc and ClipSVC services.")
-    print("  2. Reset default service security descriptors via sc.exe sdset.")
-    print("  3. Refresh and re-install official OEM/Retail system licenses via slmgr.vbs /rilc.")
-    print("  4. Restart the Software Protection service to flush stale memory locks.\n")
-    print(f"  {color('[SAFE MAINTENANCE] Excludes all bypasses. Restores standard Windows servicing.', 'Success', True)}")
+    print("  1. Verify operational state of sppsvc and ClipSVC.")
+    print("  2. Reset default service security descriptors.")
+    print("  3. Refresh and re-install official OEM/Retail system licenses.")
+    print("  4. Restart Software Protection service to flush stale memory.\n")
     pause()
 
 def show_edition():
     clear()
-    screen_title("Windows Edition & Target Inspector", "Official Windows SKU Information and DISM Servicing Targets")
-    print(f"  {color('CURRENT EDITION CONFIGURATION', 'PrimaryText', True)}\n")
-    print(f"  {'Installed Edition'.ljust(26)}: {color('Professional', 'Success', True)}")
-    print(f"  {'Composition Edition'.ljust(26)}: {color('Enterprise', 'PrimaryText', True)}")
-    print(f"  {'Windows Build'.ljust(26)}: {color('26100.2033', 'PrimaryText', True)}\n")
-    print(f"  {color('AVAILABLE TARGET UPGRADE EDITIONS (DISM)', 'PrimaryText', True)}\n")
-    print(f"  {color('[READY]', 'Success', True)}  Enterprise")
-    print(f"  {color('[READY]', 'Success', True)}  Education")
-    print(f"  {color('[READY]', 'Success', True)}  ProfessionalEducation")
-    print(f"  {color('[READY]', 'Success', True)}  ProfessionalWorkstation\n")
+    screen_title("Windows Edition Inspector", "Active SKU & Upgradable Editions")
+    print(f"  {color('CURRENT COMPOSITION EDITION', 'PrimaryText', True)}\n")
+    print(f"  {'Current Edition ID'.ljust(24)}: {color('Professional', 'PrimaryText', True)}")
+    print(f"  {'Product Name'.ljust(24)}: {color('Windows 11 Pro', 'PrimaryText', True)}")
+    print(f"  {'Installation Type'.ljust(24)}: {color('Client', 'PrimaryText', True)}\n")
     pause()
 
 def show_network():
     clear()
-    screen_title("Network & Connectivity Diagnostics", "Adapter Status and Microsoft Servicing Endpoint Verification")
-    print(f"  {color('ACTIVE NETWORK ADAPTERS', 'PrimaryText', True)}\n")
-    print(f"  {'Interface (Ethernet)'.ljust(26)}: {color('Gigabit Network Interface', 'PrimaryText', True)}")
-    print(f"  {'  IPv4 Address'.ljust(26)}: {color('192.168.1.100 (Connected)', 'SecondaryText')}\n")
-    print(f"  {color('OFFICIAL SERVICING ENDPOINT CONNECTIVITY', 'PrimaryText', True)}\n")
-    
-    endpoints = [
-        ("Toolkit Portal", "https://wintoolkit.marjukamin.com", "Active (Cloudflare Global Edge)"),
-        ("Windows Licensing", "https://licensing.mp.microsoft.com", "Reachable (HTTPS 200)"),
-        ("Software Protection", "https://sls.microsoft.com", "Reachable (HTTPS 200)"),
-        ("Office Click-to-Run CDN", "https://officecdn.microsoft.com", "Reachable (HTTPS 200)"),
-        ("Windows Update CDN", "http://download.windowsupdate.com", "Reachable (HTTP 200)")
-    ]
-    for name, url, status in endpoints:
-        print(f"  {color('[OK]', 'Success', True)}  {name.ljust(26)} {color(status, 'SecondaryText')}")
+    screen_title("Network & Telemetry Diagnostics", "Connectivity & Microsoft Verification Endpoints")
+    print(f"  {'Microsoft Activation'.ljust(24)}: {color('kms.core.windows.net', 'SecondaryText')} -> {color('[24ms OK]', 'Success', True)}")
+    print(f"  {'Windows Update CDN'.ljust(24)}: {color('windowsupdate.com', 'SecondaryText')} -> {color('[18ms OK]', 'Success', True)}")
+    print(f"  {'Office CDN Service'.ljust(24)}: {color('officecdn.microsoft.com', 'SecondaryText')} -> {color('[22ms OK]', 'Success', True)}\n")
     pause()
 
 def show_about():
     clear()
-    screen_title("About, Credits and License", "Open Source Heritage, Compliance and Project Information")
+    screen_title("About, Credits & License", "Compliance and Project Information")
     print(f"  {color('MARJUK AMIN WINDOWS TOOLKIT', 'PrimaryText', True)}")
     print(f"  {color('A better way to manage Windows.', 'CrimsonAccent', True)}\n")
-    print(f"  {'Product Version'.ljust(26)}: {color('1.0.0 (Release)', 'PrimaryText', True)}")
-    print(f"  {'Author & Maintainer'.ljust(26)}: {color('Marjuk Amin (2026)', 'PrimaryText', True)}")
-    print(f"  {'Official Portal'.ljust(26)}: {color('https://wintoolkit.marjukamin.com', 'PrimaryText', True)}")
-    print(f"  {'Source Repository'.ljust(26)}: {color('https://github.com/Marjuk06/marjuk-windows-toolkit', 'PrimaryText', True)}")
-    print(f"  {'License'.ljust(26)}: {color('GNU General Public License v3.0 (GPL-3.0)', 'Success', True)}\n")
-    print(f"  {color('OPEN-SOURCE HERITAGE & THIRD-PARTY CREDITS', 'PrimaryText', True)}")
-    print("  - Microsoft-Activation-Scripts (MAS) v3.12: Upstream technical research (GPL-3.0)")
-    print("  - @abbodi1406: Licensing status inspection research and Office C2R discovery")
-    print("  - asdcorp: clic (Client Licensing Check) P/Invoke routines (MIT License)")
-    print("  - Alex (aka may, ave9858): DISM API research\n")
+    print(f"  {'Product Version'.ljust(24)}: {color('1.0.0 (Release)', 'PrimaryText', True)}")
+    print(f"  {'Author & Maintainer'.ljust(24)}: {color('Marjuk Amin (2026)', 'PrimaryText', True)}")
+    print(f"  {'Official Portal'.ljust(24)}: {color('https://wintoolkit.marjukamin.com', 'PrimaryText', True)}")
+    print(f"  {'License'.ljust(24)}: {color('GNU General Public License v3.0 (GPL-3.0)', 'Success', True)}\n")
     pause()
 
 def main():
@@ -191,25 +183,29 @@ def main():
         clear()
         header()
         
-        print(f" {color('SYSTEM & LICENSING INSPECTION', 'PrimaryText', True)} {color('─'*59, 'Burgundy')}")
-        print(f"  {color('[1]', 'CrimsonAccent')} {'System Overview'.ljust(28)} {color('Hardware, processor, memory, Secure Boot and TPM status', 'SecondaryText')}")
-        print(f"  {color('[2]', 'CrimsonAccent')} {'Licensing Inspector'.ljust(28)} {color('Comprehensive WMI, CIM, and vNext licensing diagnostics', 'SecondaryText')}")
-        print(f"  {color('[3]', 'CrimsonAccent')} {'Office Installation'.ljust(28)} {color('Click-to-Run versions, update channels, and installed apps', 'SecondaryText')}\n")
+        category("System & Licensing Inspection")
+        menu_row("1", "System Overview", "Hardware, processor, Secure Boot & TPM status")
+        menu_row("2", "Licensing Inspector", "WMI, CIM, and vNext licensing diagnostics")
+        menu_row("3", "Office Installation", "Click-to-Run versions and installed apps")
+        print()
         
-        print(f" {color('SYSTEM MAINTENANCE & REPAIR', 'PrimaryText', True)} {color('─'*61, 'Burgundy')}")
-        print(f"  {color('[4]', 'CrimsonAccent')} {'System File Integrity'.ljust(28)} {color('Execute SFC scan and analyze component store logs', 'SecondaryText')}")
-        print(f"  {color('[5]', 'CrimsonAccent')} {'Component Servicing (DISM)'.ljust(28)} {color('Verify, check, and restore Windows image health', 'SecondaryText')}")
-        print(f"  {color('[6]', 'CrimsonAccent')} {'Service & Store Repair'.ljust(28)} {color('Rebuild licensing tokens, restart sppsvc, and verify WMI', 'SecondaryText')}\n")
+        category("System Maintenance & Repair")
+        menu_row("4", "System File Integrity", "Execute SFC scan and analyze servicing logs")
+        menu_row("5", "Component Servicing", "DISM CheckHealth, ScanHealth & RestoreHealth")
+        menu_row("6", "Service & Store Repair", "Rebuild licensing tokens & restart sppsvc")
+        print()
         
-        print(f" {color('WINDOWS MANAGEMENT & NETWORK', 'PrimaryText', True)} {color('─'*60, 'Burgundy')}")
-        print(f"  {color('[7]', 'CrimsonAccent')} {'Windows Edition Info'.ljust(28)} {color('Current SKU, composition edition, and DISM target upgrades', 'SecondaryText')}")
-        print(f"  {color('[8]', 'CrimsonAccent')} {'Network Diagnostics'.ljust(28)} {color('Active adapters, latency, and official Microsoft endpoints', 'SecondaryText')}\n")
+        category("Windows Management & Network")
+        menu_row("7", "Windows Edition Info", "Current SKU and DISM target upgrades")
+        menu_row("8", "Network Diagnostics", "Active adapters & Microsoft endpoints")
+        print()
         
-        print(f" {color('APPLICATION INFORMATION', 'PrimaryText', True)} {color('─'*65, 'Burgundy')}")
-        print(f"  {color('[A]', 'CrimsonAccent')} {'About, Credits & License'.ljust(28)} {color('GPL-3.0 license, upstream credits, and project URLs', 'SecondaryText')}")
-        print(f"  {color('[Q]', 'CrimsonAccent')} {'Exit Toolkit'.ljust(28)} {color('Restore console and close application', 'SecondaryText')}\n")
+        category("Application Information")
+        menu_row("A", "About & License", "GPL-3.0 license and project URLs")
+        menu_row("Q", "Exit Toolkit", "Restore console and close application")
+        print()
         
-        print(f"{color('─'*92, 'Burgundy')}")
+        print(color("─" * WIDTH, "Burgundy"))
         print(f" {color('[1-8, A] Select Option   [Q] Exit', 'SecondaryText')}")
         print()
         
@@ -238,6 +234,5 @@ def main():
             print("\n  Toolkit preview closed cleanly.\n")
             break
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

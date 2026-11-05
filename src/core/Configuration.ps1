@@ -19,7 +19,7 @@ class ToolkitConfig {
     [string]$Theme = "BurgundyCharcoal"
     [bool]$EnableTrueColor = $true
     [bool]$ForceAsciiBorders = $false
-    [int]$StandardWidth = 94
+    [int]$StandardWidth = 76
     [int]$StandardHeight = 32
     [bool]$ShowTelemetryHeader = $true
     [bool]$LoggingEnabled = $true
