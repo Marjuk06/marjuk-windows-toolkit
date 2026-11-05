@@ -178,18 +178,24 @@ function Write-ToolkitKeyValue {
         [Parameter(Mandatory = $true)]
         [string]$Key,
 
-        [Parameter(Mandatory = $true)]
-        [string]$Value,
+        [Parameter(Mandatory = $false)]
+        [AllowEmptyString()]
+        [string]$Value = "None",
 
         [Parameter(Mandatory = $false)]
         [int]$KeyWidth = 26,
 
         [Parameter(Mandatory = $false)]
+        [Alias("Color")]
         [string]$ValueColor = "PrimaryText",
 
         [Parameter(Mandatory = $false)]
         [bool]$UseTrueColor = $true
     )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        $Value = "None"
+    }
 
     $paddedKey = "  " + $Key.PadRight($KeyWidth)
     $keyText = Format-Colored -Text $paddedKey -Color "SecondaryText" -UseTrueColor $UseTrueColor

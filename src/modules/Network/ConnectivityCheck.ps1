@@ -96,8 +96,8 @@ function Show-NetworkDiagnosticsScreen {
                 $ipStr = if ($ip) { $ip -join ", " } else { "DHCP / Unassigned" }
 
                 Write-ToolkitKeyValue -Key "Interface ($($adapter.Name))" -Value "$($adapter.InterfaceDescription)" -UseTrueColor $UseTrueColor
-                Write-ToolkitKeyValue -Key "  IPv4 Address" -Value $ipStr -Color "SecondaryText" -UseTrueColor $UseTrueColor
-                Write-ToolkitKeyValue -Key "  Link Speed" -Value "$($adapter.LinkSpeed)" -Color "SecondaryText" -UseTrueColor $UseTrueColor
+                Write-ToolkitKeyValue -Key "  IPv4 Address" -Value $ipStr -ValueColor "SecondaryText" -UseTrueColor $UseTrueColor
+                Write-ToolkitKeyValue -Key "  Link Speed" -Value "$($adapter.LinkSpeed)" -ValueColor "SecondaryText" -UseTrueColor $UseTrueColor
             }
         }
         catch {
@@ -106,7 +106,7 @@ function Show-NetworkDiagnosticsScreen {
     }
     else {
         Write-ToolkitKeyValue -Key "Interface (eth0)" -Value "Virtual Gigabit Ethernet Adapter" -UseTrueColor $UseTrueColor
-        Write-ToolkitKeyValue -Key "  IPv4 Address" -Value "192.168.1.100" -Color "SecondaryText" -UseTrueColor $UseTrueColor
+        Write-ToolkitKeyValue -Key "  IPv4 Address" -Value "192.168.1.100" -ValueColor "SecondaryText" -UseTrueColor $UseTrueColor
     }
 
     [System.Console]::WriteLine()

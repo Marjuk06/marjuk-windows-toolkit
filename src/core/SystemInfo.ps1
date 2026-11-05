@@ -29,7 +29,7 @@ function Get-ToolkitSystemSummary {
     param()
 
     $summary = [SystemHardwareSummary]::new()
-    $summary.ComputerName = $env:COMPUTERNAME
+    $summary.ComputerName = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { [System.Net.Dns]::GetHostName() }
 
     if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
         # Safe mock state for cross-platform/Linux testing

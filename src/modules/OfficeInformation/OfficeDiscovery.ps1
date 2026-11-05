@@ -90,7 +90,7 @@ function Show-OfficeInformationScreen {
         Write-ToolkitKeyValue -Key "Architecture" -Value $report.Platform -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "Update Channel" -Value $report.UpdateChannel -ValueColor "PrimaryText" -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "Release IDs" -Value $report.InstalledProducts -UseTrueColor $UseTrueColor
-        Write-ToolkitKeyValue -Key "Client Directory" -Value $report.ClientFolder -Color "SecondaryText" -UseTrueColor $UseTrueColor
+        Write-ToolkitKeyValue -Key "Client Directory" -Value $report.ClientFolder -ValueColor "SecondaryText" -UseTrueColor $UseTrueColor
     }
 
     [System.Console]::WriteLine()
