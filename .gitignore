@@ -1,0 +1,7 @@
+# Local temporary and log files
+MarjukToolkit/
+*.log
+dist/
+staging/
+.vscode/
+.idea/

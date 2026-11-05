@@ -1,0 +1,31 @@
+{
+    "Application": {
+        "Name": "MARJUK AMIN WINDOWS TOOLKIT",
+        "ShortName": "MarjukToolkit",
+        "Version": "1.0.0",
+        "Tagline": "A better way to manage Windows.",
+        "PrimaryDomain": "https://wintoolkit.marjukamin.com",
+        "TechnicalAlias": "https://activation.marjukamin.com",
+        "RepositoryUrl": "https://github.com/marjuk06/marjuk-windows-toolkit"
+    },
+    "Interface": {
+        "Theme": "BurgundyCharcoal",
+        "EnableTrueColor": true,
+        "ForceAsciiBorders": false,
+        "StandardWidth": 94,
+        "StandardHeight": 32,
+        "ShowTelemetryHeader": true
+    },
+    "Logging": {
+        "Enabled": true,
+        "LogLevel": "Information",
+        "RetentionDays": 7,
+        "LogDirectory": "MarjukToolkit\\Logs"
+    },
+    "Services": {
+        "CheckUpdatesOnStartup": false,
+        "RequireElevationConfirmation": true,
+        "SafetyPromptByDefault": true
+    }
+}
+
