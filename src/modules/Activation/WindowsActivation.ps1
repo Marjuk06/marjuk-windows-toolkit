@@ -3,8 +3,9 @@
     Windows Digital License (HWID), Product Key, and Genuine Activation Module.
 .DESCRIPTION
     Detects Windows HWID digital license entitlements via EditionUpgradeManager COM
-    and Software Licensing Service (SLS), inspects UEFI/BIOS OA3x embedded product keys,
-    verifies edition and channel states, and integrates official Microsoft activation tools.
+    and Software Licensing Service (SLS), identifies generic default vs unique keys,
+    inspects UEFI/BIOS OA3x embedded product keys, verifies edition and channel states,
+    and integrates official Microsoft activation workflows.
 .LICENSE
     Licensed under the GNU General Public License v3.0 (GPL-3.0).
     Portions derived from diagnostic research by @abbodi1406 and asdcorp (MIT).
@@ -18,8 +19,11 @@ class WindowsDigitalLicenseReport {
     [string]$SkuId = "None"
     [string]$Channel = "Unknown"
     [string]$PartialProductKey = "None"
+    [string]$KeyClassification = "Unknown"
     [int]$LicenseStatusCode = 0
     [string]$LicenseStatusText = "Unlicensed"
+    [int]$LicenseReasonHr = 0
+    [string]$LicenseReasonHex = "0x00000000"
     [bool]$IsLicensed = $false
     [bool]$IsPermanent = $false
     [bool]$HasDigitalLicense = $false
@@ -30,6 +34,66 @@ class WindowsDigitalLicenseReport {
     [string]$BiosOemKeyDescription = "None"
     [int]$GracePeriodDays = 0
     [int]$GracePeriodMinutes = 0
+}
+
+$script:MarjukEumComType = $null
+
+function Get-WindowsKeyClassification {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$PartialKey = "",
+
+        [Parameter(Mandatory = $false)]
+        [string]$Channel = ""
+    )
+
+    if ([string]::IsNullOrWhiteSpace($PartialKey) -or $PartialKey -eq "None") {
+        return "No Key Installed"
+    }
+
+    # Well-known Microsoft Generic Default Keys (HWID Digital License Carriers)
+    $genericRetailKeys = @{
+        "3V66T" = "Generic Default Key (Win 10/11 Pro Digital Entitlement Carrier)"
+        "H8Q99" = "Generic Default Key (Win 10/11 Home Digital Entitlement Carrier)"
+        "8HVX7" = "Generic Default Key (Win 10/11 Pro N Digital Entitlement Carrier)"
+        "27V28" = "Generic Default Key (Win 10/11 Education Digital Entitlement Carrier)"
+        "6F4BT" = "Generic Default Key (Win 10/11 Home Single Language Carrier)"
+        "X3WVW" = "Generic Default Key (Win 10/11 Enterprise Digital Carrier)"
+        "DXG7C" = "Generic Default Key (Win 10/11 Pro for Workstations Carrier)"
+    }
+
+    # Well-known Microsoft Public KMS Client Setup Keys (GVLK)
+    $publicGvlkKeys = @{
+        "T83GX" = "Official Microsoft Public GVLK (Win 10/11 Pro KMS Client)"
+        "MH37W" = "Official Microsoft Public GVLK (Win 10/11 Pro N KMS Client)"
+        "NW6C2" = "Official Microsoft Public GVLK (Win 10/11 Education KMS Client)"
+        "2BX7T" = "Official Microsoft Public GVLK (Win 10/11 Enterprise KMS Client)"
+        "DPH2V" = "Official Microsoft Public GVLK (Win 10/11 Enterprise N KMS Client)"
+        "NRG8B" = "Official Microsoft Public GVLK (Win 10/11 Pro Workstations KMS Client)"
+        "M7XTQ" = "Official Microsoft Public GVLK (Win 10/11 Enterprise LTSC KMS Client)"
+    }
+
+    $upper = $PartialKey.Trim().ToUpper()
+    if ($genericRetailKeys.ContainsKey($upper)) {
+        return $genericRetailKeys[$upper]
+    }
+    if ($publicGvlkKeys.ContainsKey($upper)) {
+        return $publicGvlkKeys[$upper]
+    }
+
+    if ($Channel -match "OEM") {
+        return "Unique OEM License Key ($Channel)"
+    }
+    elseif ($Channel -match "Retail") {
+        return "Unique Retail Product Key"
+    }
+    elseif ($Channel -match "MAK") {
+        return "Volume Multiple Activation Key (MAK)"
+    }
+
+    return "Installed Product Key ($Channel)"
 }
 
 function Test-WindowsDigitalEntitlementCom {
@@ -43,17 +107,21 @@ function Test-WindowsDigitalEntitlementCom {
 
     try {
         $sysPath = "$env:SystemRoot\System32"
-        if (-not (Test-Path "$sysPath\EditionUpgradeManagerObj.dll")) {
+        if (-not (Test-Path -LiteralPath "$sysPath\EditionUpgradeManagerObj.dll")) {
             return -1
         }
 
-        $typeName = "MarjukEumInterop"
-        if (-not ([System.Management.Automation.PSTypeName]$typeName).Type) {
+        if ($null -eq $script:MarjukEumComType) {
             $cab = [System.Reflection.Emit.CustomAttributeBuilder]
-            $asmName = New-Object System.Reflection.AssemblyName("MarjukEumAssembly")
-            $dynAsm = [AppDomain]::CurrentDomain.DefineDynamicAssembly($asmName, [System.Reflection.Emit.AssemblyBuilderAccess]::Run)
-            $dynMod = $dynAsm.DefineDynamicModule("MarjukEumModule", $false)
-            $iCom = $dynMod.DefineType($typeName, 'Public, Interface, Abstract, Import')
+            $asmName = New-Object System.Reflection.AssemblyName("MarjukEumInteropAssembly")
+            if ([System.Reflection.Emit.AssemblyBuilder].GetMethod("DefineDynamicAssembly", @([System.Reflection.AssemblyName], [System.Reflection.Emit.AssemblyBuilderAccess]))) {
+                $dynAsm = [System.Reflection.Emit.AssemblyBuilder]::DefineDynamicAssembly($asmName, [System.Reflection.Emit.AssemblyBuilderAccess]::Run)
+            }
+            else {
+                $dynAsm = [AppDomain]::CurrentDomain.DefineDynamicAssembly($asmName, [System.Reflection.Emit.AssemblyBuilderAccess]::Run)
+            }
+            $dynMod = $dynAsm.DefineDynamicModule("MarjukEumInteropModule")
+            $iCom = $dynMod.DefineType("MarjukEumInterface", 'Public, Interface, Abstract, Import')
             $iCom.SetCustomAttribute($cab::new([System.Runtime.InteropServices.ComImportAttribute].GetConstructor(@()), @()))
             $iCom.SetCustomAttribute($cab::new([System.Runtime.InteropServices.GuidAttribute].GetConstructor(@([String])), @('F2DCB80D-0670-44BC-9002-CD18688730AF')))
             $iCom.SetCustomAttribute($cab::new([System.Runtime.InteropServices.InterfaceTypeAttribute].GetConstructor(@([Int16])), @([Int16]1)))
@@ -61,12 +129,12 @@ function Test-WindowsDigitalEntitlementCom {
                 [void]$iCom.DefineMethod("VF$_", 'Public, Virtual, HideBySig, NewSlot, Abstract', 'Standard, HasThis', [Void], @())
             }
             [void]$iCom.DefineMethod('AcquireModernLicenseForWindows', 1478, 33, [Int32], @([Int32], [Int32].MakeByRefType()))
-            [void]$iCom.CreateType()
+            $script:MarjukEumComType = $iCom.CreateType()
         }
 
         $comObj = New-Object -ComObject EditionUpgradeManagerObj.EditionUpgradeManager
-        $params = @(1, $null)
-        $hr = ([System.Management.Automation.PSTypeName]$typeName).Type.GetMethod("AcquireModernLicenseForWindows").Invoke($comObj, $params)
+        $params = @(1, 0)
+        $hr = $script:MarjukEumComType.GetMethod("AcquireModernLicenseForWindows").Invoke($comObj, $params)
         if ($hr -ne 0) {
             return -1
         }
@@ -91,6 +159,7 @@ function Get-WindowsDigitalLicenseStatus {
         $report.SkuId = "4de7cb65-cdf1-4de9-8ae8-e3cce27b9f2c"
         $report.Channel = "Retail"
         $report.PartialProductKey = "3V66T"
+        $report.KeyClassification = Get-WindowsKeyClassification -PartialKey "3V66T" -Channel "Retail"
         $report.LicenseStatusCode = 1
         $report.LicenseStatusText = "Licensed"
         $report.IsLicensed = $true
@@ -134,12 +203,24 @@ function Get-WindowsDigitalLicenseStatus {
                                     -Filter "ApplicationID='$winAppId' and PartialProductKey is not null" `
                                     -ErrorAction Stop
 
-        foreach ($p in $products) {
+        # Prioritize licensed SKU or primary OS SKU
+        $selectedProduct = $products | Where-Object { $_.LicenseStatus -eq 1 } | Select-Object -First 1
+        if (-not $selectedProduct) {
+            $selectedProduct = $products | Select-Object -First 1
+        }
+
+        if ($selectedProduct) {
+            $p = $selectedProduct
             $report.ProductName = [string]$p.Name
             $report.Description = [string]$p.Description
             $report.SkuId = [string]$p.ID
             $report.PartialProductKey = [string]$p.PartialProductKey
             $report.LicenseStatusCode = [int]$p.LicenseStatus
+
+            if ($null -ne $p.LicenseStatusReason) {
+                $report.LicenseReasonHr = [int]$p.LicenseStatusReason
+                $report.LicenseReasonHex = "0x{0:X8}" -f $p.LicenseStatusReason
+            }
 
             if ($p.ProductKeyChannel) {
                 $report.Channel = [string]$p.ProductKeyChannel
@@ -157,6 +238,8 @@ function Get-WindowsDigitalLicenseStatus {
                 $report.Channel = "Volume:MAK"
             }
 
+            $report.KeyClassification = Get-WindowsKeyClassification -PartialKey $report.PartialProductKey -Channel $report.Channel
+
             if ($null -ne $p.GracePeriodRemaining) {
                 $report.GracePeriodMinutes = [int]$p.GracePeriodRemaining
                 $report.GracePeriodDays = [int][Math]::Round($p.GracePeriodRemaining / 1440)
@@ -173,13 +256,9 @@ function Get-WindowsDigitalLicenseStatus {
                 2 { $report.LicenseStatusText = "Initial Out-of-Box Grace Period" }
                 3 { $report.LicenseStatusText = "Additional Out-of-Tolerance Grace Period" }
                 4 { $report.LicenseStatusText = "Non-Genuine Grace Period" }
-                5 { $report.LicenseStatusText = "Notification Mode (Unlicensed / Expired)" }
+                5 { $report.LicenseStatusText = "Notification Mode ($($report.LicenseReasonHex))" }
                 6 { $report.LicenseStatusText = "Extended Grace Period" }
-                default { $report.LicenseStatusText = "Unlicensed" }
-            }
-
-            if ($report.IsLicensed) {
-                break
+                default { $report.LicenseStatusText = "Unlicensed ($($report.LicenseReasonHex))" }
             }
         }
 
@@ -187,10 +266,9 @@ function Get-WindowsDigitalLicenseStatus {
         $eumCode = Test-WindowsDigitalEntitlementCom
         if ($eumCode -ge 0 -and $eumCode -ne 1) {
             $report.HasDigitalLicense = $true
-            $report.DigitalLicenseSummary = "Active (Verified via EditionUpgradeManager)"
+            $report.DigitalLicenseSummary = "Active (Verified via EditionUpgradeManager COM)"
         }
         elseif ($report.IsLicensed -and $report.IsPermanent -and ($report.Channel -match "Retail|OEM")) {
-            # Check if default generic retail/HWID key is in use or permanent retail entitlement
             $report.HasDigitalLicense = $true
             $report.DigitalLicenseSummary = "Permanent Entitlement ($($report.Channel) Channel)"
         }
@@ -220,8 +298,8 @@ function Show-WindowsDigitalLicenseScreen {
 
     while ($true) {
         Clear-ToolkitScreen
-        Write-ToolkitScreenTitle -Title "Windows Digital License & Activation" `
-                                 -Subtitle "HWID Entitlement Detection, UEFI Firmware Keys & Genuine Activation" `
+        Write-ToolkitScreenTitle -Title "Windows HWID & Digital License Inspector" `
+                                 -Subtitle "Digital Entitlement Detection, Key Classification & Genuine Workflows" `
                                  -UseTrueColor $UseTrueColor
 
         $status = Get-WindowsDigitalLicenseStatus
@@ -234,13 +312,14 @@ function Show-WindowsDigitalLicenseScreen {
         Write-ToolkitKeyValue -Key "SKU Activation ID" -Value $status.SkuId -ValueColor "SecondaryText" -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "Product Key Channel" -Value $status.Channel -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "Partial Product Key" -Value $status.PartialProductKey -UseTrueColor $UseTrueColor
+        Write-ToolkitKeyValue -Key "Key Classification" -Value $status.KeyClassification -ValueColor "SecondaryText" -UseTrueColor $UseTrueColor
 
         $actColor = if ($status.IsLicensed) { "Success" } else { "Warning" }
         $actLabel = if ($status.IsLicensed -and $status.IsPermanent) {
             "Licensed (Permanent Activation)"
         }
         elseif ($status.IsLicensed) {
-            "Licensed (Expires in $($status.GracePeriodDays) days)"
+            "Licensed (Volume Renewal in $($status.GracePeriodDays) days)"
         }
         else {
             $status.LicenseStatusText
@@ -261,7 +340,7 @@ function Show-WindowsDigitalLicenseScreen {
         }
 
         [System.Console]::WriteLine()
-        [System.Console]::WriteLine("  " + (Format-Colored -Text "AVAILABLE MANAGEMENT OPERATIONS" -Color "PrimaryText" -Bold $true -UseTrueColor $UseTrueColor))
+        [System.Console]::WriteLine("  " + (Format-Colored -Text "GENUINE DIGITAL LICENSE & KEY WORKFLOWS" -Color "PrimaryText" -Bold $true -UseTrueColor $UseTrueColor))
         [System.Console]::WriteLine("  [1] Re-Verify Digital License & Genuine Entitlement State")
         [System.Console]::WriteLine("  [2] Install Genuine 25-Character Product Key (slmgr.vbs /ipk)")
         [System.Console]::WriteLine("  [3] Apply Embedded UEFI/BIOS Firmware Key to System")
@@ -279,7 +358,7 @@ function Show-WindowsDigitalLicenseScreen {
         switch ($choice.Trim()) {
             "1" {
                 [System.Console]::WriteLine()
-                Write-ToolkitProgressBar -Percent 50 -StatusMessage "Querying ClipSVC and SoftwareLicensingProduct..." -UseTrueColor $UseTrueColor
+                Write-ToolkitProgressBar -Percent 50 -StatusMessage "Querying ClipSVC and EditionUpgradeManager COM..." -UseTrueColor $UseTrueColor
                 $recheck = Get-WindowsDigitalLicenseStatus
                 Write-ToolkitProgressBar -Percent 100 -StatusMessage "Verification complete." -UseTrueColor $UseTrueColor
                 [System.Console]::WriteLine()

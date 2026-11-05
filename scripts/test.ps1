@@ -143,10 +143,25 @@ Write-Host "Phase 5: Testing Activation Management Modules..." -ForegroundColor 
 $winLic = Get-WindowsDigitalLicenseStatus
 Assert-Test -Name "WindowsActivation: Digital license status object returned" -Condition ($null -ne $winLic -and -not [string]::IsNullOrEmpty($winLic.ProductName))
 Assert-Test -Name "WindowsActivation: Channel detected" -Condition (-not [string]::IsNullOrEmpty($winLic.Channel))
+Assert-Test -Name "WindowsActivation: Classify Generic Default Key (3V66T)" -Condition ((Get-WindowsKeyClassification -PartialKey "3V66T") -match "Generic Default Key")
+Assert-Test -Name "WindowsActivation: Classify Public GVLK Key (T83GX)" -Condition ((Get-WindowsKeyClassification -PartialKey "T83GX") -match "Official Microsoft Public GVLK")
+Assert-Test -Name "WindowsActivation: Classify Unique Key (ABCDE)" -Condition ((Get-WindowsKeyClassification -PartialKey "ABCDE" -Channel "Retail") -match "Unique Retail Product Key")
 
 $offDiag = Get-OfficeActivationDiagnostics
 Assert-Test -Name "OfficeActivation: Diagnostic audit object returned" -Condition ($null -ne $offDiag)
 Assert-Test -Name "OfficeActivation: Ohook check returns boolean" -Condition ($offDiag.OhookDetected -is [bool])
+Assert-Test -Name "OfficeActivation: SystemSppcSignatureStatus populated" -Condition (-not [string]::IsNullOrEmpty($offDiag.SystemSppcSignatureStatus))
+
+# Test UTF-16LE and UTF-8 Office vNext JSON parser
+$tempUtf16File = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "marjuk_test_vnext_utf16.json"
+$tempUtf8File  = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath "marjuk_test_vnext_utf8.json"
+[System.IO.File]::WriteAllText($tempUtf16File, '{"License":"eyJQcm9kdWN0UmVsZWFzZUlkIjoiTzM2NVByb1BsdXNSZXRhaWwifQ=="}', [System.Text.Encoding]::Unicode)
+[System.IO.File]::WriteAllText($tempUtf8File,  '{"License":"eyJQcm9kdWN0UmVsZWFzZUlkIjoiUHJvUGx1czIwMjRWb2x1bWUifQ=="}', [System.Text.Encoding]::UTF8)
+$parsed16 = Read-OfficeLicenseJsonFile -FilePath $tempUtf16File
+$parsed8  = Read-OfficeLicenseJsonFile -FilePath $tempUtf8File
+Remove-Item -LiteralPath $tempUtf16File, $tempUtf8File -Force -ErrorAction SilentlyContinue
+Assert-Test -Name "OfficeActivation: Parses UTF-16LE vNext license JSON" -Condition ($null -ne $parsed16 -and $parsed16.License -ne "")
+Assert-Test -Name "OfficeActivation: Parses UTF-8 vNext license JSON" -Condition ($null -ne $parsed8 -and $parsed8.License -ne "")
 
 $kmsDiag = Get-KmsConfigurationReport
 Assert-Test -Name "KmsManagement: KMS configuration report returned" -Condition ($null -ne $kmsDiag -and -not [string]::IsNullOrEmpty($kmsDiag.ClientMachineId))
@@ -159,6 +174,8 @@ Assert-Test -Name "ActivationDiagnostics: SPP service telemetry returned" -Condi
 
 $errResolved = Resolve-ActivationErrorCode -ErrorCode "0xC004F074"
 Assert-Test -Name "ActivationDiagnostics: Resolves 0xC004F074 (SL_E_CHPA_NO_KMS_AVAILABLE)" -Condition ($errResolved.Symbolic -eq "SL_E_CHPA_NO_KMS_AVAILABLE")
+$errResolved2 = Resolve-ActivationErrorCode -ErrorCode "0x80070005"
+Assert-Test -Name "ActivationDiagnostics: Resolves 0x80070005 (E_ACCESSDENIED)" -Condition ($errResolved2.Symbolic -eq "E_ACCESSDENIED")
 
 $adminCheck = Test-ToolkitAdmin
 Assert-Test -Name "Permissions: Admin privilege check returns boolean" -Condition ($adminCheck -is [bool])

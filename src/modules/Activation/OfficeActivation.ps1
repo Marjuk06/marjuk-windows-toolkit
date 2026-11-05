@@ -38,9 +38,40 @@ class OfficeActivationAuditReport {
     [string]$InstallPath = "None"
     [bool]$OhookDetected = $false
     [string[]]$OhookPaths = @()
+    [string]$SystemSppcSignatureStatus = "Verified (Microsoft Windows Signed)"
     [OfficeLicenseEntry[]]$WmiLicenses = @()
     [OfficeVNextToken[]]$VNextTokens = @()
     [string[]]$LicensingNextModes = @()
+}
+
+function Read-OfficeLicenseJsonFile {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($FilePath)
+        if ($bytes.Length -lt 4) { return $null }
+
+        # Detect UTF-16LE BOM (FF FE) or alternating null bytes typical of UTF-16LE vNext license files
+        $text = $null
+        if (($bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) -or ($bytes[1] -eq 0x00 -and $bytes[3] -eq 0x00)) {
+            $text = [System.Text.Encoding]::Unicode.GetString($bytes).Trim([char]0xFEFF, [char]0x0000, ' ', "`r", "`n")
+        }
+        else {
+            $text = [System.Text.Encoding]::UTF8.GetString($bytes).Trim([char]0xFEFF, [char]0x0000, ' ', "`r", "`n")
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($text)) {
+            return ($text | ConvertFrom-Json -ErrorAction Stop)
+        }
+    }
+    catch {
+        return $null
+    }
+    return $null
 }
 
 function Test-OfficeOhookModification {
@@ -105,8 +136,8 @@ function Get-OfficeVNextTokens {
             $files = Get-ChildItem -Path $loc.Path -Recurse -File -ErrorAction SilentlyContinue
             foreach ($file in $files) {
                 try {
-                    $rawJson = Get-Content -LiteralPath $file.FullName -Encoding Unicode -Raw -ErrorAction Stop | ConvertFrom-Json
-                    if ($rawJson.License) {
+                    $rawJson = Read-OfficeLicenseJsonFile -FilePath $file.FullName
+                    if ($null -ne $rawJson -and $rawJson.License) {
                         $decodedBytes = [System.Convert]::FromBase64String($rawJson.License)
                         $decodedStr = [System.Text.Encoding]::UTF8.GetString($decodedBytes)
                         $licObj = $decodedStr | ConvertFrom-Json
@@ -187,7 +218,18 @@ function Get-OfficeActivationDiagnostics {
         $audit.ProductReleaseIds = $c2rInfo.InstalledProducts
         $audit.InstallPath = $c2rInfo.ClientFolder
 
-        # 1. Check Ohook modification status
+        # 1. Check Ohook modification status and System32 sppc.dll Authenticode signature
+        $sysSppc = Join-Path -Path $env:SystemRoot -ChildPath "System32\sppc.dll"
+        if (Test-Path -LiteralPath $sysSppc) {
+            $sig = Get-AuthenticodeSignature -FilePath $sysSppc -ErrorAction SilentlyContinue
+            if ($sig -and $sig.Status -eq "Valid") {
+                $audit.SystemSppcSignatureStatus = "Valid (Signed by Microsoft)"
+            }
+            elseif ($sig) {
+                $audit.SystemSppcSignatureStatus = "Status: $($sig.Status)"
+            }
+        }
+
         $ohookFiles = Test-OfficeOhookModification
         if ($ohookFiles.Count -gt 0) {
             $audit.OhookDetected = $true
@@ -273,6 +315,7 @@ function Show-OfficeActivationScreen {
         Write-ToolkitKeyValue -Key "Office Installation" -Value $instText -ValueColor $instColor -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "Configured Products" -Value $audit.ProductReleaseIds -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "Update Channel" -Value $audit.UpdateChannel -UseTrueColor $UseTrueColor
+        Write-ToolkitKeyValue -Key "System32 sppc.dll" -Value $audit.SystemSppcSignatureStatus -ValueColor "Success" -UseTrueColor $UseTrueColor
 
         if ($audit.OhookDetected) {
             Write-ToolkitKeyValue -Key "Ohook Integrity Check" -Value "[WARNING] Ohook sppc.dll Proxy Detected" -ValueColor "Warning" -UseTrueColor $UseTrueColor
@@ -399,3 +442,4 @@ function Show-OfficeActivationScreen {
         }
     }
 }
+

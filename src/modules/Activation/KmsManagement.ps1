@@ -14,9 +14,11 @@
 
 class KmsAuditReport {
     [bool]$IsKmsClientChannel = $false
+    [bool]$OfficeKmsClientActive = $false
     [string]$ClientMachineId = "Not Available"
     [string]$RegisteredKmsHost = "None (Auto-Discovery)"
     [int]$RegisteredKmsPort = 1688
+    [string]$OfficeKmsHost = "None (Inherits System / Auto)"
     [string]$DiscoveredKmsHost = "None"
     [string]$DiscoveredKmsIp = "Not Available"
     [int]$ActivationIntervalMinutes = 120
@@ -103,14 +105,15 @@ function Get-KmsConfigurationReport {
             }
         }
 
-        # 2. Query active KMS Client Product SKU
+        # 2. Query active Windows and Office KMS Client Product SKUs
         $winAppId = "55c92734-d682-4d71-983e-d6ec3f16059f"
+        $offAppId = "0ff1ce15-a989-479d-af46-f275c6370663"
         $products = Get-CimInstance -ClassName SoftwareLicensingProduct `
-                                    -Filter "ApplicationID='$winAppId' and PartialProductKey is not null" `
+                                    -Filter "PartialProductKey is not null" `
                                     -ErrorAction SilentlyContinue
 
         foreach ($p in $products) {
-            if ($p.Description -match "VOLUME_KMSCLIENT") {
+            if ($p.ApplicationID -eq $winAppId -and $p.Description -match "VOLUME_KMSCLIENT") {
                 $report.IsKmsClientChannel = $true
                 if ($null -ne $p.GracePeriodRemaining) {
                     $report.RemainingGraceDays = [int][Math]::Round($p.GracePeriodRemaining / 1440)
@@ -128,9 +131,15 @@ function Get-KmsConfigurationReport {
                     $report.DiscoveredKmsIp = [string]$p.DiscoveredKeyManagementServiceIpAddress
                 }
             }
+            elseif ($p.ApplicationID -eq $offAppId -and $p.Description -match "KMS") {
+                $report.OfficeKmsClientActive = $true
+                if (-not [string]::IsNullOrWhiteSpace($p.KeyManagementServiceName)) {
+                    $report.OfficeKmsHost = [string]$p.KeyManagementServiceName
+                }
+            }
         }
 
-        # 3. Check SPP Registry for app-specific KMS overrides
+        # 3. Check SPP and OSPP Registry for app-specific KMS overrides
         $sppKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform"
         if (Test-Path -LiteralPath $sppKey) {
             $sppProps = Get-ItemProperty -Path $sppKey -ErrorAction SilentlyContinue
@@ -139,6 +148,14 @@ function Get-KmsConfigurationReport {
             }
             if ($sppProps.DisableKeyManagementServiceHostCaching -eq 1) {
                 $report.HostCachingEnabled = $false
+            }
+        }
+
+        $osppKey = "HKLM:\SOFTWARE\Microsoft\OfficeSoftwareProtectionPlatform"
+        if (Test-Path -LiteralPath $osppKey) {
+            $osppProps = Get-ItemProperty -Path $osppKey -ErrorAction SilentlyContinue
+            if ($osppProps.KeyManagementServiceName -and $report.OfficeKmsHost -match "^None") {
+                $report.OfficeKmsHost = [string]$osppProps.KeyManagementServiceName
             }
         }
 
@@ -155,11 +172,17 @@ function Get-KmsConfigurationReport {
             }
         }
 
-        # 5. Evaluate Registered KMS Host against known non-organizational / emulator servers
+        # 5. Evaluate Registered KMS Hosts against known non-organizational / emulator servers
         if ($report.RegisteredKmsHost -notmatch "^None") {
             if (Test-UnauthorizedKmsHost -HostName $report.RegisteredKmsHost) {
                 $report.UnauthorizedConfigDetected = $true
-                $report.SecurityWarnings += "Registered KMS server '$($report.RegisteredKmsHost)' matches a known non-organizational or loopback KMS emulator."
+                $report.SecurityWarnings += "Registered Windows KMS server '$($report.RegisteredKmsHost)' matches a known non-organizational or loopback KMS emulator."
+            }
+        }
+        if ($report.OfficeKmsHost -notmatch "^None") {
+            if (Test-UnauthorizedKmsHost -HostName $report.OfficeKmsHost) {
+                $report.UnauthorizedConfigDetected = $true
+                $report.SecurityWarnings += "Registered Office KMS server '$($report.OfficeKmsHost)' matches a known non-organizational or loopback KMS emulator."
             }
         }
     }
@@ -229,7 +252,8 @@ function Show-KmsManagementScreen {
         Write-ToolkitKeyValue -Key "Client Machine ID (CMID)" -Value $kms.ClientMachineId -ValueColor "SecondaryText" -UseTrueColor $UseTrueColor
 
         $hostColor = if ($kms.UnauthorizedConfigDetected) { "Warning" } else { "PrimaryText" }
-        Write-ToolkitKeyValue -Key "Registered KMS Server" -Value "$($kms.RegisteredKmsHost) (Port: $($kms.RegisteredKmsPort))" -ValueColor $hostColor -UseTrueColor $UseTrueColor
+        Write-ToolkitKeyValue -Key "Windows KMS Server" -Value "$($kms.RegisteredKmsHost) (Port: $($kms.RegisteredKmsPort))" -ValueColor $hostColor -UseTrueColor $UseTrueColor
+        Write-ToolkitKeyValue -Key "Office KMS Server" -Value $kms.OfficeKmsHost -ValueColor $hostColor -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "DNS Auto-Discovery Host" -Value "$($kms.DiscoveredKmsHost) [IP: $($kms.DiscoveredKmsIp)]" -UseTrueColor $UseTrueColor
         Write-ToolkitKeyValue -Key "Activation / Renewal" -Value "$($kms.ActivationIntervalMinutes) min / $($kms.RenewalIntervalMinutes) min" -UseTrueColor $UseTrueColor
         if ($kms.IsKmsClientChannel) {
@@ -380,3 +404,4 @@ function Show-KmsManagementScreen {
         }
     }
 }
+

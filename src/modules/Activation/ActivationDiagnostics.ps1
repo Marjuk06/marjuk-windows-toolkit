@@ -86,6 +86,16 @@ function Resolve-ActivationErrorCode {
             Cause    = "Cannot resolve Microsoft activation server hostname (activation-v2.sls.microsoft.com)."
             Action   = "Check DNS settings and run Network Diagnostics to verify internet reachability."
         }
+        "0X80070005" = @{
+            Symbolic = "E_ACCESSDENIED"
+            Cause    = "Access is denied to Software Protection Platform registry keys or tokens.dat store."
+            Action   = "Run the toolkit as Administrator and execute Licensing Service & Store Repair (Option 7) to reset sppsvc ACLs."
+        }
+        "0XC004F014" = @{
+            Symbolic = "SL_E_PKEY_NOT_AVAILABLE"
+            Cause    = "The Software Licensing Service reported that the product key is not available on this edition."
+            Action   = "Verify that your product key matches your installed Windows edition via Windows Edition Info (Option 8)."
+        }
     }
 
     if ($knownCodes.ContainsKey($normalized)) {
@@ -486,3 +496,4 @@ function Show-ActivationHubScreen {
                            -UseTrueColor $UseTrueColor `
                            -ForceAscii $ForceAscii
 }
+
