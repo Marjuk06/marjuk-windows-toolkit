@@ -32,6 +32,9 @@ catch {
 }
 
 $launcherDir = $PSScriptRoot
+if (-not $launcherDir -and $MyInvocation.MyCommand.Path) {
+    $launcherDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
 if (-not $launcherDir) {
     $launcherDir = (Get-Location).Path
 }

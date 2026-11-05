@@ -47,12 +47,13 @@ try {
     if (Test-Path -LiteralPath $appDir) {
         Remove-Item -Path $appDir -Recurse -Force -ErrorAction SilentlyContinue
     }
-    Expand-Archive -Path $zipFile -DestinationPath $tempDir -Force
+    New-Item -Path $appDir -ItemType Directory -Force | Out-Null
+    Expand-Archive -Path $zipFile -DestinationPath $appDir -Force
 
-    # Locate extracted folder (marjuk-windows-toolkit-main)
-    $extractedFolder = Join-Path -Path $tempDir -ChildPath "marjuk-windows-toolkit-main"
-    if (-not (Test-Path -LiteralPath $extractedFolder)) {
-        $extractedFolder = (Get-ChildItem -Path $tempDir -Directory | Where-Object { $_.Name -like "*toolkit*" } | Select-Object -First 1).FullName
+    # Locate extracted folder inside $appDir
+    $extractedFolder = (Get-ChildItem -Path $appDir -Directory | Select-Object -First 1).FullName
+    if (-not $extractedFolder) {
+        $extractedFolder = $appDir
     }
 
     $mainScript = Join-Path -Path $extractedFolder -ChildPath "src\launcher\main.ps1"
