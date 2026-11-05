@@ -39,7 +39,7 @@ function Invoke-LicensingServiceRepair {
 
     $proceed = Show-ToolkitConfirmation -ActionTitle "Repair Windows Licensing Services" `
                                         -Description "Restores official service descriptors and re-registers system license files." `
-                                        -RiskLevel [SecurityRiskLevel]::MediumRisk `
+                                        -RiskLevel "MediumRisk" `
                                         -UseTrueColor $UseTrueColor
 
     if (-not $proceed) {

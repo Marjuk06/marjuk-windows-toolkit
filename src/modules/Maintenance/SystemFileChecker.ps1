@@ -27,7 +27,7 @@ function Invoke-SystemFileChecker {
 
         $confirmElev = Show-ToolkitConfirmation -ActionTitle "Elevate Toolkit to Administrator" `
                                                -Description "Relaunch this toolkit with elevated administrator permissions." `
-                                               -RiskLevel [SecurityRiskLevel]::LowRisk `
+                                               -RiskLevel "LowRisk" `
                                                -UseTrueColor $UseTrueColor
 
         if ($confirmElev) {
@@ -38,7 +38,7 @@ function Invoke-SystemFileChecker {
 
     $proceed = Show-ToolkitConfirmation -ActionTitle "Run System File Checker (sfc /scannow)" `
                                         -Description "Scans integrity of all protected system files and replaces corrupted files with cached copies." `
-                                        -RiskLevel [SecurityRiskLevel]::MediumRisk `
+                                        -RiskLevel "MediumRisk" `
                                         -UseTrueColor $UseTrueColor
 
     if (-not $proceed) {

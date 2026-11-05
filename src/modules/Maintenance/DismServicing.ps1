@@ -54,7 +54,7 @@ function Invoke-DismServicing {
 
     $proceed = Show-ToolkitConfirmation -ActionTitle "Run DISM $dismArg" `
                                         -Description "Servicing the Windows component store using official DISM.exe." `
-                                        -RiskLevel [SecurityRiskLevel]::MediumRisk `
+                                        -RiskLevel "MediumRisk" `
                                         -UseTrueColor $UseTrueColor
 
     if (-not $proceed) {

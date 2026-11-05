@@ -68,6 +68,12 @@ function Get-ToolkitEnvironment {
             elseif ($regProps.ReleaseId) {
                 $envInfo.DisplayVersion = [string]$regProps.ReleaseId
             }
+
+            # Windows 11 Build 22000+ compatibility fix:
+            # Microsoft preserves "Windows 10" in the CurrentVersion\ProductName registry key for legacy app compatibility.
+            if ($envInfo.BuildNumber -ge 22000 -and $envInfo.OsName -match "Windows 10") {
+                $envInfo.OsName = $envInfo.OsName -replace "Windows 10", "Windows 11"
+            }
         }
         catch {
             $envInfo.BuildNumber = [System.Environment]::OSVersion.Version.Build
